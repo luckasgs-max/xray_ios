@@ -32,7 +32,7 @@ final class PacketTunnelManager {
 
     /// 使用异步通知序列观察系统连接状态。
     @ObservationIgnored
-    private var statusObservationTask: Task<Void, Never>?
+    private var statusObservation: NSObjectProtocol?
 
     /// 防止系统接受启动请求后始终不回报任何活动状态。
     @ObservationIgnored
@@ -74,7 +74,9 @@ final class PacketTunnelManager {
 
     deinit {
         managerSetupTask?.cancel()
-        statusObservationTask?.cancel()
+        if let statusObservation {
+            NotificationCenter.default.removeObserver(statusObservation)
+        }
         startAcknowledgementTask?.cancel()
         restartTask?.cancel()
     }
@@ -122,18 +124,17 @@ final class PacketTunnelManager {
     }
 
     private func observeStatusChanges(for manager: NETunnelProviderManager) {
-        statusObservationTask?.cancel()
-        let connection = manager.connection
-        statusObservationTask = Task { @MainActor [weak self] in
-            let notifications = NotificationCenter.default.notifications(
-                named: .NEVPNStatusDidChange,
-                object: connection
-            ).map { _ in () }
+        if let statusObservation {
+            NotificationCenter.default.removeObserver(statusObservation)
+        }
 
-            for await _ in notifications {
-                guard !Task.isCancelled else {
-                    return
-                }
+        let connection = manager.connection
+        statusObservation = NotificationCenter.default.addObserver(
+            forName: .NEVPNStatusDidChange,
+            object: connection,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
                 self?.refreshConnectionState()
             }
         }
