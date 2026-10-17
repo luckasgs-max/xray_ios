@@ -7,20 +7,28 @@ on:
 jobs:
   build:
     runs-on: macos-15
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: List Xcode projects
+      - name: Build Xray
         run: |
-          find . -maxdepth 4 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \)
+          xcodebuild \
+            -project Xray.xcodeproj \
+            -scheme Xray \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
-      - name: List schemes
-        run: |
-          find . -name "*.xcodeproj" -print0 | while IFS= read -r -d '' project; do
-            echo "Project: $project"
-            xcodebuild -list -project "$project" || true
-          done
+      - name: Package build outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xray-build
+          path: build/DerivedData/Build/Products/
+          if-no-files-found: warn
+          retention-days: 7
