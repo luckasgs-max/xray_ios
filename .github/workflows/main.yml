@@ -15,7 +15,7 @@ jobs:
       - name: Build Xray
         run: |
           set -o pipefail
-          xcodebuild -quiet \
+          xcodebuild \
             -project Xray.xcodeproj \
             -scheme Xray \
             -configuration Release \
@@ -25,11 +25,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Upload build products
-        if: always()
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R build/DerivedData/Build/Products/Release-iphoneos/Xray.app build/Payload/
+          cd build
+          zip -r Xray-unsigned.ipa Payload
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: xray-build
-          path: build/DerivedData/Build/Products/
-          if-no-files-found: warn
+          name: Xray-unsigned-IPA
+          path: build/Xray-unsigned.ipa
           retention-days: 7
