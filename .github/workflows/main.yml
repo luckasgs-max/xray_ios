@@ -14,7 +14,8 @@ jobs:
 
       - name: Build Xray
         run: |
-          xcodebuild \
+          set -o pipefail
+          xcodebuild -quiet \
             -project Xray.xcodeproj \
             -scheme Xray \
             -configuration Release \
@@ -24,7 +25,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Package build outputs
+      - name: Upload build products
         if: always()
         uses: actions/upload-artifact@v4
         with:
