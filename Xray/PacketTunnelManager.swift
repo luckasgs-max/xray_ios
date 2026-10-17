@@ -125,10 +125,12 @@ final class PacketTunnelManager {
         statusObservationTask?.cancel()
         let connection = manager.connection
         statusObservationTask = Task { @MainActor [weak self] in
-            for await _ in NotificationCenter.default.notifications(
+            let notifications = NotificationCenter.default.notifications(
                 named: .NEVPNStatusDidChange,
                 object: connection
-            ) {
+            ).map { _ in () }
+
+            for await _ in notifications {
                 guard !Task.isCancelled else {
                     return
                 }
